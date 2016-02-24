@@ -2,6 +2,30 @@
 
 History
 -------
+
+Release 0.7.9 (March 17, 2015)
+++++++++++++++++++++++++++++++
+- Command line support for WeMo LED Light (thanks @fritz-fritz)
+- Command line support for WeMo Maker (thanks @logjames)
+- Support for 2.0.0 firmware (thanks @fritz-fritz)
+- Bug fixes
+
+Release 0.7.3 (August 10, 2014)
+++++++++++++++++++++++++++++++++
+- Fixed #18: Error when run as root
+- Fixed #26: Evict devices from cache when unreachable
+- Fixed #29: GetPower stopped working for Insight devices
+- Fixed #31: Add blink method on switches, include in REST API
+- Fixed #33, #37: Handle invalid devices without dying
+- Fixed #35: Require requests >= 2.3.0
+- Fixed #40: Retry requests in the event of failure
+- Fixed #47: Don't choke on invalid newlines in XML returned by switches
+             (thanks to @fingon)
+
+Release 0.7.2 (January 28, 2014)
+++++++++++++++++++++++++++++++++
+- Fix a bug with using query parameters on /api/device
+
 Release 0.7 (January 27, 2014)
 ++++++++++++++++++++++++++++++
 - Added REST API

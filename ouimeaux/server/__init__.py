@@ -9,6 +9,8 @@ from flask.ext.restful import reqparse, abort, Api, Resource
 
 from ouimeaux.signals import statechange
 from ouimeaux.device.switch import Switch
+from ouimeaux.device.insight import Insight
+from ouimeaux.device.maker import Maker
 from ouimeaux.environment import Environment, UnknownDevice
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
@@ -23,15 +25,41 @@ api = Api(app)
 ENV = None
 
 
-def initialize():
+def initialize(bind=None):
     global ENV
     if ENV is None:
-        ENV = Environment(with_cache=False)
+        ENV = Environment(bind=bind)
         ENV.start()
         gevent.spawn(ENV.discover, 10)
 
 
 def serialize(device):
+    if isinstance(device, Insight):
+      return {'name': device.name,
+              'type': device.__class__.__name__,
+              'serialnumber': device.serialnumber,
+              'state': device.get_state(),
+              'model': device.model,
+              'host': device.host,
+              'lastchange': str(device.last_change),
+              'onfor': device.on_for,
+              'ontoday': device.today_on_time,
+              'ontotal': device.ontotal,
+              'todaymw': device.today_kwh,
+              'totalmw': device.totalmw,
+              'currentpower': device.current_power
+              }
+    elif isinstance(device, Maker):
+       return {'name': device.name,
+              'type': device.__class__.__name__,
+              'serialnumber': device.serialnumber,
+              'state': device.get_state(),
+              'model': device.model,
+              'host': device.host,
+              'hassensor' : device.has_sensor,
+              'switchmode' : device.switch_mode,
+              'sensor' : device.sensor_state
+              }
     return {'name': device.name,
             'type': device.__class__.__name__,
             'serialnumber': device.serialnumber,
@@ -74,11 +102,16 @@ class DeviceResource(Resource):
         dev = get_device(name)
         if not isinstance(dev, Switch):
             abort(405, error='Only switches can have their state changed')
-        action = request.json.get('state', request.values.get(
-            'state', 'toggle'))
-        if action not in ('on', 'off', 'toggle'):
+        action = (request.json or {}).get('state', (
+            request.values or {}).get('state', 'toggle'))
+        if action not in ('on', 'off', 'toggle', 'blink'):
             abort(400, error='{} is not a valid state'.format(action))
-        getattr(dev, action)()
+        if action == 'blink':
+            delay = (request.json or {}).get('delay', (
+                request.values or {}).get('delay', '1'))
+            getattr(dev, action)(delay=int(delay))
+        else:
+            getattr(dev, action)()
         return serialize(dev)
 
 
@@ -94,7 +127,6 @@ class SocketNamespace(BaseNamespace):
         self.emit("send:devicestate", data)
 
     def on_statechange(self, data):
-        print data
         ENV.get(data['name']).set_state(data['state'])
 
     def on_join(self, data):
